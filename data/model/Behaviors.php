@@ -100,7 +100,7 @@ trait Behaviors {
 				return $behavior->invokeMethod($method, $params);
 			}
 		}
-		parent::__call($method, $params);
+		return parent::__call($method, $params);
 	}
 
 	/**
