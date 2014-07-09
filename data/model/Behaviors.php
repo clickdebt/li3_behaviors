@@ -124,7 +124,7 @@ trait Behaviors {
 			if (isset($self->_behaviors[$class])) {
 				return $self->_behaviors[$class]->config($entry);
 			}
-			throw new RuntimeException("Unexisting Behavior named `{$class}`.");
+			return false;
 		}
 		if ($config === false) {
 			unset($self->_behaviors[$class]);
