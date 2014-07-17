@@ -2,7 +2,7 @@
 /**
  * Lithium: the most rad php framework
  *
- * @copyright     Copyright 2012, Union of RAD(http://union-of-rad.org)
+ * @copyright     Copyright 2014, Union of RAD(http://union-of-rad.org)
  * @license       http://opensource.org/licenses/bsd-license.php The BSD License
  */
 
@@ -14,7 +14,7 @@ use li3_behaviors\data\model\Behaviors;
 class MockPost extends \lithium\data\Model {
 	use Behaviors;
 
-	protected $_actsAs = [];
+	protected static $_actsAs = [];
 
 	public static $connection = null;
 
