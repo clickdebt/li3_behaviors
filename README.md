@@ -1,31 +1,29 @@
-## About
+# li₃ Behaviors
 
 This library provides base classes for implementing model behaviors.
 Model behaviors provide a simple way to extend models. This pattern allow 
 common logic to be encapsulated inside behaviors for keeping models light
 and composed only by its own business logic.
 
-The goal of this project is to work out and finalize a model behavior
-implementation that in the future can be integrated into Lithium. We
-are depending on PHP >= 5.4 here as we want to use new features like
-traits and short array syntax. 
+## Installation
 
-It's assumed that the effort of finalizing an implementation will take as long 
-as it takes Lithium to move further to a future version that will then also depend 
-on 5.4. Alternatively the `Behaviors` implementation can be folded into the 
-`Model` and long array syntax be used. This would make an earlier merge
-into core possible.
+The preferred installation method is via composer. You can add
+the library as a dependency via:
 
-_Please note that this project is still in its alpha phase and implementation
-details may change without any deprecation notices._ Still we'll try to keep
-this as stable as possible. 
+```
+composer require unionofrad/li3_behaviors
+```
 
-If you'd like to contribute then adding tests would be very welcome as this
-project lacks decent ones currently.
+li₃ plugins must be registered within your application bootstrap phase 
+as they use a different (faster) autoloader. 
 
-## Requirements
+```php
+Libraries::add('li3_behaviors')
+```
 
-Lithium and PHP 5.4.
+The official manual has more information on 
+[how to register the plugin](http://li3.me/docs/book/manual/1.x/installation/plugins) 
+with the app or use alternative installation methods (i.e. via Git).
 
 ## Usage
 
@@ -41,14 +39,14 @@ class Posts extends \lithium\data\Model {
 
    use li3_behaviors\data\model\Behaviors;
 
-   protected static $_actsAs = [
+   protected $_actsAs = [
        'Sluggable' => ['field' => 'slug', 'label' => 'title']
    ];
 	
    // ...
 ```
 
-The behaviors trait also makes some static methods available in the model,
+The `Behaviors` trait also makes some static methods available in the model,
 which allows to manage behaviors as follows.
 
 ```php
@@ -86,11 +84,11 @@ class Sluggable extends \li3_behaviors\data\model\Behavior {
 	];
 
 	protected static function _filters($model, $behavior) {
-		$model::applyFilter('save', function($self, $params, $chain) use ($behavior) {
+		Filters::apply($model, 'save', function($params, $next) use ($behavior) {
 			$params['data'][$behavior->config('field')] = static::_generate(
 				$params['data'][$behavior->config('label')]
 			);
-			return $chain->next($self, $params, $chain);
+			return $next($params);
 		});
 	}
 
@@ -179,7 +177,7 @@ class TokenGenerator extends \li3_behaviors\data\model\Behavior {
 	// Generates a random token either short (8 chars) or long (16 chars) and
 	// returns it. Default expiration is one year.
 	public static function token($model, $behavior) {
-		$token = substr(md5(String::random(32)), 0, $behavior->config('short') ? 8 : 16);
+		$token = substr(md5(Random::generate(32)), 0, $behavior->config('short') ? 8 : 16);
 		$expires = date('Y-m-d H:i:s', strtotime('+1 year'));
 
 		return compact('token', 'expires');
@@ -256,10 +254,10 @@ class Timestamp extends \li3_behaviors\data\model\Behavior {
 	// ...
 
 	protected static function _filters($model, $behavior) {
-		$model::applyFilter('save', function($self, $params, $chain) use ($behavior) {
+		Filters::apply($model, 'save', function($params, $next) use ($behavior) {
 			$params['data'] = static::_timestamp($behavior, $params['entity'], $params['data']);
 
-			return $chain->next($self, $params, $chain);
+			return $next($params);
 		});
 	}
 
@@ -270,7 +268,36 @@ class Timestamp extends \li3_behaviors\data\model\Behavior {
 	// ...
 ```
 
+### Attaching Finders to the Model
+
+To add finders to the model's find method, finders should be used. If your behavior 
+needs to use finders a good place to attach them is the behavior's `_finders()`
+method. Overwrite it to add finders to the model during initialization phase.
+
+```php
+// ...
+
+class Taggable extends \li3_behaviors\data\model\Behavior {
+	// ...
+
+	protected static function _finders($model, $behavior) {
+		$model::finder('tag', function($params, $next) use ($behavior) {
+			// ...
+			return $next($params);
+		});
+	}
+
+	// ...
+```
+
+## Copyright & License
+
+Copyright 2010 Union of RAD. All rights reserved. This library
+is distributed under the terms of the BSD 3-Clause License. The
+full license text can be found in the LICENSE.txt file.
+
 ## Credits for previous Implementations
 
+* David Persson, https://github.com/davidpersson/li3_behaviors
 * Nate Abele, https://github.com/nateabele/li3_behaviors
 * Simon Jaillet, https://github.com/jails/li3_behaviors

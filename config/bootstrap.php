@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃ behaviors
  *
- * @copyright     Copyright 2014, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2010, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 use lithium\core\Libraries;
@@ -13,7 +14,10 @@ use lithium\core\Libraries;
  * behaviors available to your application by running `Libraries::locate('behavior')`.
  */
 Libraries::paths([
-	'behavior' => ['{:library}\extensions\data\behavior\{:name}']
+	'behavior' => [
+		'{:library}\data\model\behavior\{:name}',
+		'{:library}\extensions\data\behavior\{:name}'
+	]
 ]);
 
 ?>

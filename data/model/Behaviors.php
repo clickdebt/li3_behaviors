@@ -1,38 +1,40 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃ behaviors
  *
- * @copyright     Copyright 2014, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2014, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace li3_behaviors\data\model;
 
 use lithium\core\Libraries;
 use lithium\util\Set;
+use Exception;
 use RuntimeException;
 
 /**
  * Trait that adds support for behaviors to the Model class. Add this trait
  * to your model that you plan to use behaviors with, then define all behaviors
- * using the `actsAs` property in your model class.
+ * using the `_actsAs` property in your model class.
  *
- * {{{
+ * ```
  * // ...
  * class Posts extends \lithium\data\Model {
  *
  *    use li3_behaviors\data\model\Behaviors;
  *
- *    protected static $_actsAs = [
+ *    protected $_actsAs = [
  *        'Sluggable' => ['fields' => ['title']]
  *    ];
  * // ...
- * }}}
+ * ```
  *
  * This trait also makes some static methods available in the model,
  * which allows to manage behaviors as follows.
  *
- * {{{
+ * ```
  * // Bind the slug behavior with configuration.
  * Posts::bindBehavior('Slug', ['fields' => ['title]]);
  *
@@ -42,7 +44,7 @@ use RuntimeException;
  *
  * // Unbinding it again.
  * Posts::unbindBehavior('Slug');
- * }}}
+ * ```
  *
  * Behaviors themselves must extend the Behavior class. See the class'
  * docblock for more information on how to implement behaviors.
@@ -62,17 +64,13 @@ trait Behaviors {
 
 	/**
 	 * Indicates if we already intialized behaviors
-	 * on a model. Prevents recursion as Model's `_initialize()`
-	 * seems tricky to overwrite.
+	 * on a model.
 	 *
-	 * @fixme Refactor this when we have decent tests in place.
-	 * @var boolean
+	 * @var array Keyed by model class named mapped to boolean.
 	 */
-	protected $_initializedBehaviors = false;
+	protected static $_initializedBehaviors = [];
 
 	/**
-	 * Initializes behaviors from the `$_actsAs` property of the model.
-	 *
 	 * Overwrites `Model::_initialize()` in order to hook initialization of
 	 * behaviors into model initialization phase. Note that `Model::_initialize()`
 	 * is still called and its result returned unmodified.
@@ -83,17 +81,31 @@ trait Behaviors {
 	protected static function _initialize($class) {
 		$self = parent::_initialize($class);
 
-		if ($self->_initializedBehaviors) {
-			return $self;
-		}
-		$self->_initializedBehaviors = true;
-
-		if (isset($class::$_actsAs)) {
-			foreach (Set::normalize(static::$_actsAs) as $name => $config) {
-				static::bindBehavior($name, $config ?: []);
-			}
-		}
+		static::_initializeBehaviors();
 		return $self;
+	}
+
+	/**
+	 * Initializes behaviors from the `$_actsAs` property of the model.
+	 *
+	 * @return void
+	 */
+	protected static function _initializeBehaviors() {
+		$model = get_called_class();
+
+		if (!empty(static::$_initializedBehaviors[$model])) {
+			return;
+		}
+		static::$_initializedBehaviors[$model] = true;
+
+		$self = $model::object();
+
+		if (!property_exists($self, '_actsAs')) {
+			return;
+		}
+		foreach (Set::normalize($self->_actsAs) as $name => $config) {
+			static::bindBehavior($name, $config ?: []);
+		}
 	}
 
 	/**
@@ -101,12 +113,14 @@ trait Behaviors {
 	 * methods will get the name of the model as its first parameter
 	 * and the instance of the behavior as a second paramter.
 	 *
+	 * @fixme Type hint $params, once parent allows.
 	 * @param string $method Method name caught by `__callStatic()`.
 	 * @param array $params Arguments given to the above `$method` call.
 	 * @return mixed
 	 */
 	public static function __callStatic($method, $params) {
 		$model = get_called_class();
+		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model])) {
 			return parent::__callStatic($method, $params);
@@ -127,22 +141,24 @@ trait Behaviors {
 	 * behavior methods will receive the following parameters: `$model`
 	 * `$behavior` and `$entity`.
 	 *
+	 * @fixme Type hint $params, once parent allows.
 	 * @param string $method Method name caught by `__call()`.
 	 * @param array $params Arguments given to the above `$method` call.
 	 * @return mixed
 	 */
 	public function __call($method, $params) {
 		$model = get_called_class();
+		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model])) {
 			return parent::__call($method, $params);
 		}
 		foreach (static::$_behaviors[$model] as $class => $behavior) {
-			if ($behavior->respondsTo($method)) {
+			if (method_exists($behavior, $method)) {
 				array_unshift($params, $behavior);
 				array_unshift($params, $model);
 
-				return $behavior->invokeMethod($method, $params);
+				return call_user_func_array([$behavior, $method], $params);
 			}
 		}
 		return parent::__call($method, $params);
@@ -152,17 +168,17 @@ trait Behaviors {
 	 * Returns a behavior instance. Configuration of
 	 * the instance can be accessed as follows.
 	 *
-	 * {{{
+	 * ```
 	 * Posts::behavior('Slug')->config();
 	 * Posts::behavior('Slug')->config('fields');
-	 * }}}
+	 * ```
 	 *
 	 * @param string $name The name of the behavior.
 	 * @return \li3_behaviors\data\model\Behavior Intance of the behavior.
 	 */
 	public static function behavior($name) {
-		$class = Libraries::locate('behavior', $name);
-		$model = get_called_class();
+		list($model, $class) = static::_classesForBehavior($name);
+		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model][$class])) {
 			throw new RuntimeException("Behavior `{$class}` not bound to model `{$model}`.");
@@ -174,30 +190,75 @@ trait Behaviors {
 	 * Binds a new instance of a behavior to the model using given config or
 	 * entirely replacing an existing behavior instance with new config.
 	 *
-	 * @param string $name The name of the behavior.
+	 * @param string|object $name The name of the behavior or an instance of it.
 	 * @param array $config Configuration for the behavior instance.
 	 */
 	public static function bindBehavior($name, array $config = []) {
-		$class = Libraries::locate('behavior', $name);
-		$model = get_called_class();
+		list($model, $class) = static::_classesForBehavior($name);
+		static::_initializeBehaviors();
 
-		static::$_behaviors[$model][$class] = new $class($config + compact('model'));
+		if (is_object($name)) {
+			$name->config($config);
+		} else {
+			if (!class_exists($class)) {
+				$message  = "Behavior class `{$class}` does not exist. ";
+				$message .= "Its name might be misspelled. Behavior was requested by ";
+				$message .= "model `{$model}`.";
+				throw new Exception($message);
+			}
+			$name = new $class($config + compact('model'));
+		}
+		static::$_behaviors[$model][$class] = $name;
 	}
 
 	/**
 	 * Unbinds an instance of a behavior from the model. Will throw
-	 * an exception if behavior is not bind.
+	 * an exception if behavior is not bound.
 	 *
 	 * @param string $name The name of the behavior.
 	 */
 	public static function unbindBehavior($name) {
-		$class = Libraries::locate('behavior', $name);
-		$model = get_called_class();
+		list($model, $class) = static::_classesForBehavior($name);
+		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model][$class])) {
 			throw new RuntimeException("Behavior `{$class}` not bound to model `{$model}`.");
 		}
 		unset(static::$_behaviors[$model][$class]);
+	}
+
+	/**
+	 * Allows to check if a certain behavior is bound to the model.
+	 *
+	 * @param string $name The name of the behavior.
+	 * @return boolean
+	 */
+	public static function hasBehavior($name) {
+		static::_initializeBehaviors();
+
+		try {
+			list($model, $class) = static::_classesForBehavior($name);
+		} catch (Exception $e) {
+			return false;
+		}
+		return isset(static::$_behaviors[$model][$class]);
+	}
+
+	/**
+	 * Helper method to retrieve current model class and behavior class for name.
+	 *
+	 * @param string|object $name The name of the behavior or an instance of it.
+	 * @return array An array usable with `list()` with the model and behavior classes.
+	 */
+	protected static function _classesForBehavior($name) {
+		$model = get_called_class();
+
+		if (is_object($name)) {
+			$class = get_class($name);
+		} elseif (!$class = Libraries::locate('behavior', $name)) {
+			throw new RuntimeException("No behavior named `{$name}` found.");
+		}
+		return [$model, $class];
 	}
 }
 

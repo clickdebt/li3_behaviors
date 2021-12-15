@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃ behaviors
  *
- * @copyright     Copyright 2014, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2014, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace li3_behaviors\data\model;
@@ -52,7 +53,7 @@ namespace li3_behaviors\data\model;
  * @see li3_behaviors\data\model\Behavior::_methods()
  * @see li3_behaviors\data\model\Behaviors
  */
-class Behavior extends \lithium\core\Object {
+class Behavior {
 
 	/**
 	 * Allows to specify default configuration for the behavior.
@@ -66,7 +67,7 @@ class Behavior extends \lithium\core\Object {
 
 	/**
 	 * Holding the initialized configuration array of the behavior possibly merged from
-	 * the `$_defaults` property and any configuration via the model's `$_actsAs` property.
+	 * the `$_defaults` property and any configuration via the model's `$actsAs` property.
 	 *
 	 * Always at least holds the fully namespaced class name of the
 	 * model this behavior is bound to.
@@ -76,14 +77,15 @@ class Behavior extends \lithium\core\Object {
 	 */
 	protected $_config = [];
 
-	protected function _init() {
-		parent::_init();
+	public function __construct($config = []) {
+		$this->_config = $config;
 
 		$model = $this->_config['model'];
 		$behavior = $this;
 
 		$this->_config = static::_config($model, $behavior, $this->_config, static::$_defaults);
 		static::_filters($model, $behavior);
+		static::_finders($model, $behavior);
 
 		if ($methods = static::_methods($model, $behavior)) {
 			$model::instanceMethods($methods);
@@ -113,7 +115,7 @@ class Behavior extends \lithium\core\Object {
 	 * @param array $defaults The default configuration for this behavior.
 	 * @param array The final configuration which should be set for this behavior.
 	 */
-	protected static function _config($model, $behavior, $config, $defaults) {
+	protected static function _config($model, Behavior $behavior, array $config, array $defaults) {
 		return $config + $defaults;
 	}
 
@@ -123,10 +125,23 @@ class Behavior extends \lithium\core\Object {
 	 *
 	 *  - Overwrite to apply your own filters. -
 	 *
+	 * @see lithium\aop\Filters::apply()
 	 * @param string $model Class name of the model.
 	 * @param object $behavior Instance of the behavior.
 	 */
-	protected static function _filters($model, $behavior) {}
+	protected static function _filters($model, Behavior $behavior) {}
+
+	/**
+	 * Add finders to $model. Automatically called during initialization
+	 * of behavior and model.
+	 *
+	 *  - Overwrite to add your own finders. -
+	 *
+	 * @see lithium\data\Model::finder()
+	 * @param string $model Class name of the model.
+	 * @param object $behavior Instance of the behavior.
+	 */
+	protected static function _finders($model, Behavior $behavior) {}
 
 	/**
 	 * Allows for dyamically adding instance methods to the model. The
@@ -140,7 +155,7 @@ class Behavior extends \lithium\core\Object {
 	 * @param object $behavior Instance of the behavior.
 	 * @return array Methods to be added to the model instance.
 	 */
-	protected static function _methods($model, $behavior) {
+	protected static function _methods($model, Behavior $behavior) {
 		return [];
 	}
 
