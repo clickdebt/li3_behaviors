@@ -1,9 +1,10 @@
 <?php
 /**
- * Lithium: the most rad php framework
+ * li₃ behaviors
  *
- * @copyright     Copyright 2014, Union of RAD (http://union-of-rad.org)
- * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ * Copyright 2014, Union of RAD. All rights reserved. This source
+ * code is distributed under the terms of the BSD 3-Clause License.
+ * The full license text can be found in the LICENSE.txt file.
  */
 
 namespace li3_behaviors\tests\cases\data\model;
@@ -12,15 +13,34 @@ use li3_behaviors\data\model\Behavior;
 
 class BehaviorTest extends \lithium\test\Unit {
 
-	public function testConfig() {
-		$behavior = new Behavior(['config' => ['test1' => 'value1']]);
+	public function testConfigRead() {
+		$behavior = new Behavior([
+			'model' => 'li3_behaviors\tests\mocks\data\model\MockPost',
+			'test' => 'case'
+		]);
 
-		$expected = ['test1' => 'value1'];
+		$expected = [
+			'model' => 'li3_behaviors\tests\mocks\data\model\MockPost',
+			'test' => 'case'
+		];
 		$result = $behavior->config();
 		$this->assertEqual($expected, $result);
 
-		$expected = 'value1';
-		$result = $behavior->config('test1');
+		$expected = 'case';
+		$result = $behavior->config('test');
+		$this->assertEqual($expected, $result);
+	}
+
+	public function testConfigSet() {
+		$behavior = new Behavior([
+			'model' => 'li3_behaviors\tests\mocks\data\model\MockPost',
+			'test' => 'case'
+		]);
+
+		$behavior->config('test', 'phase');
+
+		$expected = 'phase';
+		$result = $behavior->config('test');
 		$this->assertEqual($expected, $result);
 	}
 }
