@@ -91,7 +91,7 @@ trait Behaviors {
 	 * @return void
 	 */
 	protected static function _initializeBehaviors() {
-		$model = get_called_class();
+		$model = static::class;
 
 		if (!empty(static::$_initializedBehaviors[$model])) {
 			return;
@@ -119,7 +119,7 @@ trait Behaviors {
 	 * @return mixed
 	 */
 	public static function __callStatic($method, $params) {
-		$model = get_called_class();
+		$model = static::class;
 		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model])) {
@@ -147,7 +147,7 @@ trait Behaviors {
 	 * @return mixed
 	 */
 	public function __call($method, $params) {
-		$model = get_called_class();
+		$model = static::class;
 		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model])) {
@@ -177,7 +177,7 @@ trait Behaviors {
 	 * @return \li3_behaviors\data\model\Behavior Intance of the behavior.
 	 */
 	public static function behavior($name) {
-		list($model, $class) = static::_classesForBehavior($name);
+		[$model, $class] = static::_classesForBehavior($name);
 		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model][$class])) {
@@ -194,7 +194,7 @@ trait Behaviors {
 	 * @param array $config Configuration for the behavior instance.
 	 */
 	public static function bindBehavior($name, array $config = []) {
-		list($model, $class) = static::_classesForBehavior($name);
+		[$model, $class] = static::_classesForBehavior($name);
 		static::_initializeBehaviors();
 
 		if (is_object($name)) {
@@ -218,7 +218,7 @@ trait Behaviors {
 	 * @param string $name The name of the behavior.
 	 */
 	public static function unbindBehavior($name) {
-		list($model, $class) = static::_classesForBehavior($name);
+		[$model, $class] = static::_classesForBehavior($name);
 		static::_initializeBehaviors();
 
 		if (!isset(static::$_behaviors[$model][$class])) {
@@ -237,8 +237,8 @@ trait Behaviors {
 		static::_initializeBehaviors();
 
 		try {
-			list($model, $class) = static::_classesForBehavior($name);
-		} catch (Exception $e) {
+			[$model, $class] = static::_classesForBehavior($name);
+		} catch (Exception) {
 			return false;
 		}
 		return isset(static::$_behaviors[$model][$class]);
@@ -251,10 +251,10 @@ trait Behaviors {
 	 * @return array An array usable with `list()` with the model and behavior classes.
 	 */
 	protected static function _classesForBehavior($name) {
-		$model = get_called_class();
+		$model = static::class;
 
 		if (is_object($name)) {
-			$class = get_class($name);
+			$class = $name::class;
 		} elseif (!$class = Libraries::locate('behavior', $name)) {
 			throw new RuntimeException("No behavior named `{$name}` found.");
 		}

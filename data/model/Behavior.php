@@ -66,20 +66,18 @@ class Behavior {
 	protected static $_defaults = [];
 
 	/**
-	 * Holding the initialized configuration array of the behavior possibly merged from
-	 * the `$_defaults` property and any configuration via the model's `$actsAs` property.
-	 *
-	 * Always at least holds the fully namespaced class name of the
-	 * model this behavior is bound to.
-	 *
-	 * @see li3_behaviors\data\model\Behavior::_config()
-	 * @var array
-	 */
-	protected $_config = [];
-
-	public function __construct($config = []) {
-		$this->_config = $config;
-
+     * @param mixed[] $config
+     */
+    public function __construct(/**
+     * Holding the initialized configuration array of the behavior possibly merged from
+     * the `$_defaults` property and any configuration via the model's `$actsAs` property.
+     *
+     * Always at least holds the fully namespaced class name of the
+     * model this behavior is bound to.
+     *
+     * @see li3_behaviors\data\model\Behavior::_config()
+     */
+    protected $_config = []) {
 		$model = $this->_config['model'];
 		$behavior = $this;
 
@@ -177,7 +175,7 @@ class Behavior {
 		if ($value !== null) {
 			return $this->_config[$key] = $value;
 		}
-		return isset($this->_config[$key]) ? $this->_config[$key] : null;
+		return $this->_config[$key] ?? null;
 	}
 }
 
